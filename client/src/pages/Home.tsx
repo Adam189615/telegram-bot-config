@@ -58,7 +58,7 @@ export default function Home() {
     }
 
     if (!webhookUrl.trim()) {
-      toast.error("Пожалуйста, введите webhook URL");
+      toast.error("Пожалуйста, введите URL webhook");
       return;
     }
 
@@ -72,7 +72,10 @@ export default function Home() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin w-8 h-8" />
+        <div className="text-center">
+          <Loader2 className="animate-spin w-8 h-8 mx-auto mb-4" />
+          <p className="text-slate-600">Загрузка...</p>
+        </div>
       </div>
     );
   }

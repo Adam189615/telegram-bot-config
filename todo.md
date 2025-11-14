@@ -32,3 +32,9 @@
 - [ ] Test bot configuration submission
 - [ ] Test responsive design on mobile
 - [ ] Create checkpoint before deployment
+
+## Локализация на русский язык
+- [x] Перевести все текстовые элементы в Home.tsx на русский
+- [x] Проверить все сообщения об ошибках на русском
+- [x] Обновить сообщения уведомлений (toast) на русский
+- [x] Убедиться, что все интерфейсные элементы отображаются корректно
