@@ -37,3 +37,28 @@ export const botConfigs = mysqlTable("botConfigs", {
 
 export type BotConfig = typeof botConfigs.$inferSelect;
 export type InsertBotConfig = typeof botConfigs.$inferInsert;
+
+export const notes = mysqlTable("notes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  telegramChatId: varchar("telegramChatId", { length: 64 }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Note = typeof notes.$inferSelect;
+export type InsertNote = typeof notes.$inferInsert;
+
+export const telegramMessages = mysqlTable("telegramMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  telegramChatId: varchar("telegramChatId", { length: 64 }).notNull(),
+  telegramMessageId: int("telegramMessageId").notNull(),
+  messageText: text("messageText"),
+  messageType: varchar("messageType", { length: 50 }).default("text").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TelegramMessage = typeof telegramMessages.$inferSelect;
+export type InsertTelegramMessage = typeof telegramMessages.$inferInsert;

@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { processTelegramUpdate } from "../telegram";
+import { getBotConfigByUserId } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +37,36 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // Webhook endpoint for Telegram bot updates
+  app.post("/api/webhook", express.json(), async (req, res) => {
+    try {
+      const update = req.body;
+      
+      if (!update.message || !update.message.chat) {
+        return res.status(200).json({ ok: true });
+      }
+
+      const chatId = update.message.chat.id.toString();
+      const botToken = req.headers["x-telegram-bot-token"] as string;
+
+      if (!botToken) {
+        console.warn("[Webhook] No bot token provided");
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      console.log(`[Webhook] Received update for chat ${chatId}`);
+      console.log(`[Webhook] Message: ${update.message.text}`);
+
+      // For now, just acknowledge the webhook
+      // In production, you would process the update and send a response
+      res.status(200).json({ ok: true });
+    } catch (error) {
+      console.error("[Webhook] Error processing update:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",

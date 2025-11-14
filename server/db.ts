@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, botConfigs } from "../drizzle/schema";
+import { InsertUser, users, botConfigs, notes, telegramMessages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -136,4 +136,77 @@ export async function upsertBotConfig(
       isConfigured: 1,
     });
   }
+}
+
+export async function addNote(
+  userId: number,
+  telegramChatId: string,
+  content: string
+) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot add note: database not available");
+    return;
+  }
+
+  await db.insert(notes).values({
+    userId,
+    telegramChatId,
+    content,
+  });
+}
+
+export async function getNotesByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get notes: database not available");
+    return [];
+  }
+
+  return await db.select().from(notes).where(eq(notes.userId, userId));
+}
+
+export async function searchNotes(userId: number, query: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot search notes: database not available");
+    return [];
+  }
+
+  const allNotes = await db.select().from(notes).where(eq(notes.userId, userId));
+  return allNotes.filter(note => 
+    note.content.toLowerCase().includes(query.toLowerCase())
+  );
+}
+
+export async function deleteAllNotes(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete notes: database not available");
+    return;
+  }
+
+  await db.delete(notes).where(eq(notes.userId, userId));
+}
+
+export async function saveTelegramMessage(
+  userId: number,
+  telegramChatId: string,
+  telegramMessageId: number,
+  messageText: string | null,
+  messageType: string = "text"
+) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot save message: database not available");
+    return;
+  }
+
+  await db.insert(telegramMessages).values({
+    userId,
+    telegramChatId,
+    telegramMessageId,
+    messageText,
+    messageType,
+  });
 }
