@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, botConfigs } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,51 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getBotConfigByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get bot config: database not available");
+    return undefined;
+  }
+
+  const result = await db
+    .select()
+    .from(botConfigs)
+    .where(eq(botConfigs.userId, userId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertBotConfig(
+  userId: number,
+  botToken: string,
+  webhookUrl: string
+) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot upsert bot config: database not available");
+    return;
+  }
+
+  const existing = await getBotConfigByUserId(userId);
+
+  if (existing) {
+    await db
+      .update(botConfigs)
+      .set({
+        botToken,
+        webhookUrl,
+        isConfigured: 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(botConfigs.id, existing.id));
+  } else {
+    await db.insert(botConfigs).values({
+      userId,
+      botToken,
+      webhookUrl,
+      isConfigured: 1,
+    });
+  }
+}

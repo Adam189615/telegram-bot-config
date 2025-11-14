@@ -1,10 +1,11 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { z } from "zod";
+import { getBotConfigByUserId, upsertBotConfig } from "./db";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -17,12 +18,22 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  bot: router({
+    getConfig: protectedProcedure.query(async ({ ctx }) => {
+      return await getBotConfigByUserId(ctx.user.id);
+    }),
+    saveConfig: protectedProcedure
+      .input(
+        z.object({
+          botToken: z.string().min(1, "Bot token is required"),
+          webhookUrl: z.string().url("Invalid webhook URL"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await upsertBotConfig(ctx.user.id, input.botToken, input.webhookUrl);
+        return { success: true, message: "Bot configuration saved successfully" };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

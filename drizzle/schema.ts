@@ -25,4 +25,15 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const botConfigs = mysqlTable("botConfigs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  botToken: varchar("botToken", { length: 255 }).notNull(),
+  webhookUrl: varchar("webhookUrl", { length: 512 }).notNull(),
+  isConfigured: int("isConfigured").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BotConfig = typeof botConfigs.$inferSelect;
+export type InsertBotConfig = typeof botConfigs.$inferInsert;
