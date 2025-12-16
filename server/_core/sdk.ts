@@ -91,6 +91,30 @@ class SDKServer {
     this.oauthService = new OAuthService(this.client);
   }
 
+  private async ensureDemoUser(): Promise<User> {
+    const demoOpenId = "demo-user";
+    const demoProfile = {
+      openId: demoOpenId,
+      name: "Demo User",
+      email: "demo@example.com",
+      loginMethod: "dev",
+      role: "admin" as const,
+      lastSignedIn: new Date(),
+    };
+
+    await db.upsertUser(demoProfile);
+    const userFromDb = await db.getUserByOpenId(demoOpenId);
+
+    return (
+      userFromDb ?? {
+        id: 0,
+        ...demoProfile,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    );
+  }
+
   private deriveLoginMethod(
     platforms: unknown,
     fallback: string | null | undefined
@@ -257,9 +281,15 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-    // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
+
+    if (!ENV.isProduction && !sessionCookie) {
+      console.info("[Auth] Development mode – using demo session");
+      return this.ensureDemoUser();
+    }
+
+    // Regular authentication flow
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
