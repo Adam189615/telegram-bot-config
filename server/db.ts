@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, botConfigs, notes, telegramMessages } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -100,6 +100,22 @@ export async function getBotConfigByUserId(userId: number) {
     .select()
     .from(botConfigs)
     .where(eq(botConfigs.userId, userId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getBotConfigByToken(botToken: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get bot config: database not available");
+    return undefined;
+  }
+
+  const result = await db
+    .select()
+    .from(botConfigs)
+    .where(eq(botConfigs.botToken, botToken))
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
