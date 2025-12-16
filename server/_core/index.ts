@@ -7,8 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { processTelegramUpdate } from "../telegram";
-import { getBotConfigByUserId } from "../db";
+import { processTelegramUpdate, sendTelegramMessage } from "../telegram";
+import { getBotConfigByToken } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -42,24 +42,39 @@ async function startServer() {
   app.post("/api/webhook", express.json(), async (req, res) => {
     try {
       const update = req.body;
-      
+
       if (!update.message || !update.message.chat) {
         return res.status(200).json({ ok: true });
       }
 
       const chatId = update.message.chat.id.toString();
-      const botToken = req.headers["x-telegram-bot-token"] as string;
+      const botToken =
+        (req.headers["x-telegram-bot-token"] as string) ||
+        (req.headers["x-telegram-bot-api-secret-token"] as string) ||
+        (req.query.token as string);
 
       if (!botToken) {
         console.warn("[Webhook] No bot token provided");
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      console.log(`[Webhook] Received update for chat ${chatId}`);
-      console.log(`[Webhook] Message: ${update.message.text}`);
+      const botConfig = await getBotConfigByToken(botToken);
 
-      // For now, just acknowledge the webhook
-      // In production, you would process the update and send a response
+      if (!botConfig) {
+        console.warn(`[Webhook] No bot config found for provided token`);
+        return res.status(404).json({ error: "Bot configuration not found" });
+      }
+
+      console.log(`[Webhook] Received update for chat ${chatId}`);
+
+      const replyMessage = await processTelegramUpdate(update, {
+        userId: botConfig.userId,
+        botToken,
+        telegramChatId: chatId,
+      });
+
+      await sendTelegramMessage(botToken, chatId, replyMessage);
+
       res.status(200).json({ ok: true });
     } catch (error) {
       console.error("[Webhook] Error processing update:", error);
